@@ -1,0 +1,5 @@
+node_modules/
+.env
+webrtc-signaling.db
+webrtc-signaling.db-wal
+webrtc-signaling.db-shm

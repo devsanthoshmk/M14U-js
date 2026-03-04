@@ -1,0 +1,370 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─────────────────────────── DESIGN SYSTEM TOKENS ─────────────────────────── */
+@theme {
+  /* Typography: Plus Jakarta Sans for headings (geometric, modern), DM Sans for body (clean legibility) */
+  --font-heading: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  /* Player-specific color aliases */
+  --color-player-bg: hsl(var(--player-bg));
+  --color-player-progress: hsl(var(--player-progress));
+  --color-player-hover: hsl(var(--player-hover));
+  --color-surface: hsl(var(--surface));
+  --color-surface-hover: hsl(var(--surface-hover));
+}
+
+@layer base {
+
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border, currentColor);
+  }
+}
+
+/* ─────────────────────── DARK-FIRST COLOR PALETTE ─────────────────────── */
+/*
+  Psychology: Dark theme as default because:
+  - 70%+ of music is consumed in the evening/night
+  - Dark UI makes album artwork the visual focus
+  - Reduces blue light exposure during wind-down hours
+  - Amber accent evokes warmth — analogue audio gear, vinyl, candlelight
+
+  The palette uses HSL for precise control:
+  - Background: near-black with slight warm undertone (not pure black — avoids OLED smearing)
+  - Surfaces: layered dark grays with 2-3% lightness increments (visual depth hierarchy)
+  - Accent: warm amber (38° hue) — distinct from Spotify green, YouTube red
+*/
+@layer base {
+  :root {
+    /* Default is always dark for a music app */
+    --background: 240 6% 6%;
+    --foreground: 40 15% 95%;
+    --card: 240 5% 9%;
+    --card-foreground: 40 15% 95%;
+    --popover: 240 5% 11%;
+    --popover-foreground: 40 15% 95%;
+    --primary: 38 78% 56%;
+    --primary-foreground: 240 6% 6%;
+    --secondary: 240 4% 15%;
+    --secondary-foreground: 40 10% 85%;
+    --muted: 240 4% 15%;
+    --muted-foreground: 240 5% 55%;
+    --accent: 38 78% 56%;
+    --accent-foreground: 240 6% 6%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 40 15% 95%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 38 78% 56%;
+    --radius: 0.75rem;
+
+    /* Player-specific */
+    --player-bg: 240 6% 8%;
+    --player-progress: 38 78% 56%;
+    --player-hover: 240 4% 20%;
+    --surface: 240 5% 12%;
+    --surface-hover: 240 5% 16%;
+
+    --chart-1: 38 78% 56%;
+    --chart-2: 200 60% 50%;
+    --chart-3: 150 50% 45%;
+    --chart-4: 280 60% 55%;
+    --chart-5: 350 65% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    overflow: hidden;
+    /* Prevent body scroll — app manages its own scrolling */
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ─────────────────────── CUSTOM UTILITIES ─────────────────────── */
+
+/* Scrollbar — thin and unobtrusive */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Glass effect for overlays */
+  .glass {
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    background: hsl(var(--background) / 0.75);
+  }
+
+  .glass-heavy {
+    backdrop-filter: blur(48px) saturate(200%);
+    -webkit-backdrop-filter: blur(48px) saturate(200%);
+    background: hsl(var(--background) / 0.85);
+  }
+
+  /* Gradient overlays for album art backgrounds */
+  .gradient-fade-bottom {
+    background: linear-gradient(to top, hsl(var(--background)) 0%, transparent 100%);
+  }
+
+  .gradient-fade-top {
+    background: linear-gradient(to bottom, hsl(var(--background)) 0%, transparent 100%);
+  }
+
+  /* Glow effect for active/playing elements */
+  .glow-accent {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.25), 0 0 60px hsl(var(--primary) / 0.1);
+  }
+
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* Hide native audio controls */
+  audio::-webkit-media-controls-panel {
+    display: none !important;
+  }
+}
+
+/* ─────────────────────── ANIMATIONS ─────────────────────── */
+@layer utilities {
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-down {
+    from {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulse-soft {
+
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-slide-down {
+    animation: slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+  }
+
+  /* Now-playing equalizer bars */
+  @keyframes now-playing {
+
+    0%,
+    100% {
+      height: 3px;
+    }
+
+    25% {
+      height: 10px;
+    }
+
+    50% {
+      height: 5px;
+    }
+
+    75% {
+      height: 12px;
+    }
+  }
+
+  .animate-now-playing {
+    animation: now-playing 0.8s ease-in-out infinite;
+  }
+}
+
+/* ─────────────────────── RADIX SLIDER STYLING ─────────────────────── */
+/* Progress bar and volume slider custom styles */
+[data-radix-slider-root] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  touch-action: none;
+}
+
+[data-radix-slider-track] {
+  position: relative;
+  flex-grow: 1;
+  border-radius: 9999px;
+  background: hsl(var(--muted));
+}
+
+[data-radix-slider-range] {
+  position: absolute;
+  border-radius: 9999px;
+  height: 100%;
+  background: hsl(var(--primary));
+}
+
+[data-radix-slider-thumb] {
+  display: block;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+[data-radix-slider-thumb]:hover {
+  transform: scale(1.25);
+}
+
+[data-radix-slider-thumb]:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}

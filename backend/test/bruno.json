@@ -1,0 +1,9 @@
+{
+    "version": "1",
+    "name": "M14U-js Backend",
+    "type": "collection",
+    "ignore": [
+        "node_modules",
+        ".git"
+    ]
+}

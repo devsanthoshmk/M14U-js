@@ -1,0 +1,298 @@
+# M14U — Premium Music Streaming Platform Frontend
+
+Build a modern, premium, daily-driver music platform frontend that connects to the existing Express backend at `localhost:4000`. The design philosophy prioritizes psychological UX reasoning for every element, ensuring it's usable, smooth, and feels like a professional product users reach for daily.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Design Direction**: I'm going with a **dark-first luxury aesthetic** — deep blacks with warm amber/gold accents (inspired by high-end audio equipment and vinyl culture). This avoids the "Spotify clone" look while maintaining music-platform familiarity. The psychology: dark themes reduce eye strain during evening listening (peak music hours), and warm accents create emotional warmth associated with music.
+
+> [!IMPORTANT]
+> **No Authentication**: The API has no auth endpoints. All features (queue, preferences, history) will be client-side via LocalStorage only. The listen-along feature you mentioned will export player state as JSON — the actual sync server is out of scope for now, but the state structure will be ready for it.
+
+> [!WARNING]
+> **Questions Before I Start:**
+> 1. **Logo/Brand**: Should I use a text-only logo "M14U" or do you have a logo asset? I'll design a typographic wordmark if none exists.
+> 2. **Default Locale**: The trending API accepts `q=tamil`, `q=india`, etc. — what should the default be? I'll add a locale picker but need a sensible initial value. I'll default to auto-detect from browser and fallback to `english`.
+> 3. **Library/Favorites**: The backend has no favorites/library endpoint. Should I build a client-side favorites system using LocalStorage, or skip it for now?
+
+---
+
+## Proposed Changes
+
+### Design System & Aesthetic Direction
+
+**Psychological reasoning for every major design decision:**
+
+| Element | Decision | Psychological Reasoning |
+|---|---|---|
+| **Dark theme** | Deep charcoal `#0A0A0B` with warm tones | Reduces eye strain during evening listening (70% of music is consumed after 6pm). Dark UI makes album art "pop" as focus |
+| **Accent color** | Warm amber/gold `#E8A838` | Warmth & premium feel — evokes analogue audio gear, vinyl warmth. More distinct than Spotify green or YouTube red |
+| **Typography** | "Plus Jakarta Sans" (headings) + "DM Sans" (body) | Geometric sans-serifs convey precision/modernity while remaining highly legible at small sizes on mobile |
+| **Card hover** | Subtle glow + slight scale | Communicates interactivity without jarring motion. Glow mimics warm light = inviting |
+| **Bottom player bar** | Always visible, 72px on mobile, 80px on desktop | Persistent control = user never feels "lost" from their music. Spotify/YouTube Music pattern = zero learning curve |
+| **Progress bar** | Thin line that expands on hover/touch | Reduces visual clutter at rest, invites interaction on engagement (Fitts's law) |
+| **Queue panel** | Slide-in from right with backdrop blur | Spatial consistency — queue is "beside" the player, not replacing it. Blur maintains context |
+| **Lyrics** | Center-aligned, current line highlighted + scaled | Karaoke UX pattern. Scale draws eye. Preceding/following lines dimmed = focus on now |
+| **Sleep timer** | Circular countdown in the player dropdown | Borrowed from alarm clock mental model. Circle = time passing |
+
+---
+
+### Architecture
+
+```
+src/
+├── main.tsx                  # Entry point with BrowserRouter
+├── App.tsx                   # Root layout + route definitions
+├── index.css                 # Design system tokens & global styles
+│
+├── types/
+│   ├── music.ts              # Song, Album, Artist, Thumbnail, etc.
+│   └── player.ts             # PlayerState, QueueItem, RepeatMode
+│
+├── services/
+│   ├── api.ts                # Backend API calls (search, trending, stream)
+│   └── lyrics.ts             # LRCLIB API integration
+│
+├── stores/
+│   ├── playerStore.ts        # Zustand: playback, queue, volume, repeat, shuffle
+│   ├── uiStore.ts            # Zustand: sidebar, modals, theme
+│   └── persistence.ts        # LocalStorage middleware for Zustand
+│
+├── engine/
+│   └── AudioEngine.ts        # HTMLAudioElement wrapper with event handling
+│
+├── hooks/
+│   ├── useAudioEngine.ts     # React bridge to AudioEngine
+│   ├── useDebounce.ts        # Debounced input for search
+│   ├── useMediaSession.ts    # MediaSession API for OS controls
+│   └── useSleepTimer.ts      # Sleep timer countdown logic
+│
+├── components/
+│   ├── ui/                   # shadcn/ui base components
+│   ├── layout/
+│   │   ├── AppShell.tsx      # Sidebar + content + player bar wrapper
+│   │   ├── Sidebar.tsx       # Desktop navigation sidebar
+│   │   ├── MobileNav.tsx     # Bottom tab bar for mobile
+│   │   └── TopBar.tsx        # Search bar + profile area
+│   ├── player/
+│   │   ├── PlayerBar.tsx     # Persistent bottom player bar
+│   │   ├── NowPlaying.tsx    # Full-screen now-playing view
+│   │   ├── ProgressBar.tsx   # Seekable audio progress
+│   │   ├── VolumeControl.tsx # Volume slider + mute toggle
+│   │   ├── PlayerControls.tsx# Play/pause, skip, repeat, shuffle
+│   │   └── SleepTimer.tsx    # Timer dropdown
+│   ├── queue/
+│   │   ├── QueuePanel.tsx    # Slide-in queue with drag-and-drop
+│   │   ├── QueueItem.tsx     # Single queue row (draggable)
+│   │   └── AddToQueue.tsx    # Context menu action component
+│   ├── lyrics/
+│   │   ├── LyricsPanel.tsx   # Container for synced/unsynced lyrics
+│   │   ├── SyncedLyrics.tsx  # Time-synced line-by-line display
+│   │   └── UnsyncedLyrics.tsx# Plain text lyrics fallback
+│   ├── song/
+│   │   ├── SongCard.tsx      # Grid card for home/search
+│   │   ├── SongRow.tsx       # List row for search results/queue
+│   │   └── SongContextMenu.tsx # Right-click/long-press actions
+│   ├── home/
+│   │   ├── HomeSection.tsx   # Horizontal scroll section
+│   │   ├── AlbumCard.tsx     # Album artwork card
+│   │   └── ArtistChip.tsx    # Circular artist thumbnail
+│   └── search/
+│       ├── SearchBar.tsx     # Animated search input
+│       └── SearchResults.tsx # Results layout
+│
+├── pages/
+│   ├── HomePage.tsx          # Trending sections + personalized greeting
+│   ├── SearchPage.tsx        # Search experience
+│   ├── NowPlayingPage.tsx    # Full-screen player (mobile route)
+│   ├── QueuePage.tsx         # Queue management (mobile route)
+│   └── NotFoundPage.tsx      # 404
+│
+└── utils/
+    ├── format.ts             # Duration formatting, thumbnail selection
+    ├── storage.ts            # LocalStorage typed helpers
+    └── constants.ts          # API URLs, default values
+```
+
+---
+
+### Dependencies to Install
+
+| Package | Purpose |
+|---|---|
+| `react-router-dom` | Client-side routing |
+| `zustand` | Lightweight state management (player, queue, UI) |
+| `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` | Drag-and-drop for queue reordering |
+| `framer-motion` | Animations (page transitions, lyrics, micro-interactions) |
+| `@radix-ui/react-slider` | Accessible progress bar & volume slider |
+| `@radix-ui/react-dropdown-menu` | Context menus, sleep timer dropdown |
+| `@radix-ui/react-dialog` | Modals (queue panel on mobile) |
+| `@radix-ui/react-tooltip` | Tooltips for controls |
+
+---
+
+### Detailed Component Breakdown
+
+---
+
+#### API Service Layer
+
+##### [NEW] [api.ts](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/services/api.ts)
+- `searchSongs(query: string): Promise<Song[]>` — calls `GET /api/search?q=`
+- `getTrending(locale?: string): Promise<TrendingResponse>` — calls `GET /api/trending?q=`
+- `getStreamUrl(videoId: string): Promise<string>` — calls `GET /api/stream/:videoId`
+- Base URL from `.env` variable `VITE_API_URL` defaulting to `http://localhost:4000`
+
+##### [NEW] [lyrics.ts](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/services/lyrics.ts)
+- `getLyrics(trackName, artistName, albumName?, duration?)` — calls LRCLIB `GET /api/get`
+- `searchLyrics(query)` — calls LRCLIB `GET /api/search?q=`
+- Parses LRC format `[mm:ss.xx]` into `{ time: number, text: string }[]`
+- Falls back to unsynced plain lyrics when synced unavailable
+
+---
+
+#### Player Engine
+
+##### [NEW] [AudioEngine.ts](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/engine/AudioEngine.ts)
+- Singleton class wrapping `HTMLAudioElement`
+- Methods: `play()`, `pause()`, `seek(time)`, `setVolume(0-1)`, `loadSource(url)`
+- All events (`timeupdate`, `ended`, `error`, `pause`, `play`, `waiting`, `canplay`) forwarded to callbacks
+- Handles unexpected pauses (Bluetooth disconnect, tab visibility, error recovery)
+- Pre-fetches next song stream URL when current song is 80% complete
+
+---
+
+#### Player Store (Zustand)
+
+##### [NEW] [playerStore.ts](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/stores/playerStore.ts)
+- **State**: `currentSong`, `isPlaying`, `currentTime`, `duration`, `volume`, `isMuted`, `queue[]`, `queueIndex`, `repeatMode` (off/one/all), `isShuffled`, `originalQueue[]`
+- **Actions**: `playSong()`, `togglePlay()`, `next()`, `previous()`, `seek()`, `setVolume()`, `addToQueue()`, `addNext()`, `removeFromQueue()`, `reorderQueue()`, `clearQueue()`
+- `exportState()` — returns JSON-serializable snapshot for listen-along sharing
+- `importState(json)` — restores from a shared state
+- Persisted to LocalStorage via Zustand `persist` middleware (excludes `currentTime` rapidly-changing values)
+
+---
+
+#### Lyrics System
+
+##### [NEW] [LyricsPanel.tsx](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/components/lyrics/LyricsPanel.tsx)
+- Fetches lyrics when song changes
+- Auto-detects synced vs unsynced
+- **Synced**: scrolls current line to center, highlights with scale + color, smooth scroll animation
+- **Unsynced**: displays full text, scrollable
+- Tappable lines to seek to that timestamp (synced mode)
+- Loading/error/no-lyrics states
+
+---
+
+#### Queue System
+
+##### [NEW] [QueuePanel.tsx](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/components/queue/QueuePanel.tsx)
+- Uses `@dnd-kit/sortable` for drag-and-drop reordering
+- Grip handle on each item for touch-friendly dragging
+- "Playing next" section separated from "In queue"
+- Swipe-to-remove gesture on mobile (framer-motion drag)
+- "Clear queue" and "Save as playlist" actions
+- Visual feedback during drag (item lift, shadow, gap insertion)
+
+---
+
+#### Pages
+
+##### [NEW] [HomePage.tsx](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/pages/HomePage.tsx)
+- Time-based greeting ("Good morning/afternoon/evening")
+- Horizontal scroll sections from trending API
+- Quick-play buttons on song cards (play without navigating)
+- Recently played section (from LocalStorage history)
+- Locale picker (dropdown for region)
+
+##### [NEW] [SearchPage.tsx](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/pages/SearchPage.tsx)
+- Debounced search input (300ms)
+- Results as both grid cards and list rows (toggle view)
+- Recent searches from LocalStorage
+- Empty state with search suggestions
+
+##### [NEW] [NowPlayingPage.tsx](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/pages/NowPlayingPage.tsx)
+- Full-screen player with large album art
+- Blurred album art background (gradient overlay)
+- Swipe up for lyrics panel
+- All player controls
+- Sleep timer access
+
+---
+
+#### Advanced Features
+
+##### Sleep Timer
+- Dropdown from player bar
+- Presets: 15min, 30min, 45min, 1hr, end of song
+- Custom time input
+- Fade-out volume in last 30 seconds
+- Visual countdown indicator
+
+##### Keyboard Shortcuts
+- `Space` — play/pause
+- `←` / `→` — seek 5s
+- `↑` / `↓` — volume adjust
+- `N` — next track
+- `P` — previous track
+- `M` — mute toggle
+- `L` — toggle lyrics
+- `Q` — toggle queue
+
+##### MediaSession API
+- Artwork, title, artist metadata displayed in OS notifications
+- Play/pause/next/previous hardware buttons handled
+- Progress position synced
+
+---
+
+### File Modifications
+
+#### [MODIFY] [index.css](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/index.css)
+Complete redesign of CSS variables for dark-first music theme with amber accent palette.
+
+#### [MODIFY] [main.tsx](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/main.tsx)
+Wrap app with `BrowserRouter`.
+
+#### [MODIFY] [App.tsx](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/src/App.tsx)
+Replace boilerplate with route definitions inside `AppShell` layout.
+
+#### [MODIFY] [index.html](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/index.html)
+Update title, meta description, Google Fonts link for Plus Jakarta Sans + DM Sans.
+
+#### [NEW] [.env](file:///home/santhoshmk/EDUCATION%20CONTENT/Projects/M14U-js/frontend/.env)
+`VITE_API_URL=http://localhost:4000`
+
+---
+
+## Verification Plan
+
+### Automated / Self-Verification
+1. **Build check**: `pnpm build` must complete with zero TypeScript errors
+2. **Dev server**: `pnpm dev` must start without errors
+3. **All routes**: Navigate to `/`, `/search`, `/now-playing`, `/queue` — all must render without blank screens or console errors
+
+### Manual Verification (User)
+Since there are no existing tests in the frontend and this is a greenfield UI build, verification is primarily visual and interactive:
+
+1. **Home Page**: Load the app → should see time-based greeting + trending sections with song cards. Cards should be scrollable horizontally
+2. **Search**: Type a song name → results should appear after brief debounce → click a song → it should start playing
+3. **Player Bar**: Song playing → bottom bar shows song info, progress, controls → play/pause/skip should work → progress bar should be seekable
+4. **Queue**: Add songs to queue → open queue panel → drag to reorder → songs play in new order → "play next" works
+5. **Lyrics**: Play a popular song (e.g., "Believer" by Imagine Dragons) → open lyrics → time-synced lines should scroll and highlight → tap a line to seek
+6. **Mobile**: Open in browser dev tools mobile view → bottom nav should appear instead of sidebar → all pages should be usable via touch
+7. **Sleep Timer**: Set a 1-minute timer → music should fade out and pause after 1 minute
+8. **LocalStorage**: Play songs, close tab, reopen → recently played and queue should persist
+9. **Keyboard**: Press Space to pause/play, arrow keys to seek, etc.
+10. **State export**: Check browser console — `playerStore.getState().exportState()` should return valid JSON representing the full player state
+
+> [!TIP]
+> I'll test items 1-9 progressively as I build each phase, and flag any issues. The build verification (TypeScript) runs on every save during development.
+
+---
+
+*Implementation will follow approval in 6 phases as outlined in the task checklist.*
