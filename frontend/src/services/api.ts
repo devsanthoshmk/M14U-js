@@ -51,12 +51,12 @@ export async function getTrending(locale: string = 'english'): Promise<TrendingR
 
 /**
  * Get direct audio CDN URL for a video ID.
- * URLs expire in ~6h, server caches for 2h.
- * Only call this when user actually plays — not in advance.
+ * Due to 403 Forbidden errors for IP bound streams, the stream will be proxied through the backend.
  */
 export async function getStreamUrl(videoId: string): Promise<string> {
-    const data = await fetchJson<StreamResponse>(`/api/stream/${encodeURIComponent(videoId)}`);
-    return data.url;
+    // Ping to ensure cache is warm and actualUrl exists or gets created
+    await fetchJson<StreamResponse>(`/api/stream/${encodeURIComponent(videoId)}`);
+    return `${API_BASE_URL}/api/proxy/${encodeURIComponent(videoId)}`;
 }
 
 /**

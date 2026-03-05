@@ -178,4 +178,5 @@ To deploy:
 1. Initialize a project on Railway (e.g., from your GitHub repository).
 2. Point the root directory of your app on Railway to `backend/` if deploying as a monorepo, or deploy this directory directly.
 3. Add your Firebase credentials and any other required environment variables to the Railway Variable dashboard. 
-4. **Important**: Because you specifically requested Railpack version `0.17.2`, you should also add the following environment variable to your Railway Variables dashboard: `RAILPACK_VERSION = 0.17.2`.
+4. **Important (Versions)**: Because you specifically requested Railpack version `0.17.2`, you should also add the following environment variable to your Railway Variables dashboard: `RAILPACK_VERSION = 0.17.2`.
+5. **Important (System Dependencies)**: `yt-dlp` requires Python 3 and FFmpeg to work properly in a Node.js environment. Add the following to your Railway Variables dashboard: `RAILPACK_DEPLOY_APT_PACKAGES = python3 ffmpeg`.

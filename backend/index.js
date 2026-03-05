@@ -7,6 +7,7 @@ import YTMusic from 'ytmusic-api';
 import { create } from 'youtube-dl-exec';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import https from 'https';
 import webrtcRouter from './webrtc-signaling.js';
 import v1RoomsRouter from './v1-rooms.js';
 
@@ -303,6 +304,41 @@ app.get('/api/stream/:videoId', async (req, res) => {
     } catch (error) {
         console.error("Stream fetch error:", error);
         res.status(500).json({ error: "Failed to fetch stream link" });
+    }
+});
+
+// 4. Proxy audio stream link to bypass IP-bound 403 Forbidden errors
+app.get('/api/proxy/:videoId', async (req, res) => {
+    try {
+        const videoId = req.params.videoId;
+        if (!videoId) return res.status(400).send("Video ID is required");
+
+        const cacheKey = `stream-${videoId}`;
+        let actualUrl = cache.get(cacheKey);
+
+        if (!actualUrl) {
+            return res.status(404).send("Stream URL not found in cache. Please call /api/stream/:videoId first to generate the URL.");
+        }
+
+        const headers = {};
+        if (req.headers.range) headers.Range = req.headers.range;
+
+        https.get(actualUrl, { headers }, (response) => {
+            // Check for error responses from the upstream server
+            if (response.statusCode >= 400) {
+                console.warn(`Upstream returned ${response.statusCode} for ${videoId}`);
+            }
+
+            // Forward headers and status code to frontend
+            res.writeHead(response.statusCode, response.headers);
+            response.pipe(res);
+        }).on('error', (err) => {
+            console.error("Proxy fetch error:", err);
+            res.status(500).send("Failed to proxy the audio stream.");
+        });
+    } catch (error) {
+        console.error("Proxy error:", error);
+        res.status(500).send("Failed to proxy stream link");
     }
 });
 
