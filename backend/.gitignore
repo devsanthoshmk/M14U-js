@@ -1,7 +1,7 @@
 node_modules/
 .env
-webrtc-signaling.db
-webrtc-signaling.db-wal
-webrtc-signaling.db-shm
 
+*.db
+*.db-wal
+*.db-shm
 m14u-js-firebase-adminsdk-fbsvc-9556c32162.json
