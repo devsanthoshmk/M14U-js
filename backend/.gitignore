@@ -5,3 +5,6 @@ node_modules/
 *.db-wal
 *.db-shm
 m14u-js-firebase-adminsdk-fbsvc-9556c32162.json
+# YouTube authentication cookies (never commit!)
+youtube.cookies.txt
+*cookies.txt

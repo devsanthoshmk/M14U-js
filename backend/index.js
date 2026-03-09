@@ -8,6 +8,7 @@ import { create } from 'youtube-dl-exec';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
+import fs from 'fs';
 import webrtcRouter from './webrtc-signaling.js';
 import v1RoomsRouter from './v1-rooms.js';
 
@@ -26,9 +27,79 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // We use relative path to avoid `tinyspawn` space splitting bug on absolute path with spaces
 const ytbin = 'node_modules/youtube-dl-exec/bin/yt-dlp';
-const ytExec = create(ytbin);
+
+// Add cookies support for YouTube authentication - with env var fallback
+const cookiesPath = path.join(__dirname, 'youtube.cookies.txt');
+const cookiesEnvVar = process.env.COOKIES_CONTENT_BASE64;
+let actualCookiesPath = null;
+let ytExec;
+
+// Try cookies file first (local dev + persistent storage)
+if (fs.existsSync(cookiesPath)) {
+    actualCookiesPath = cookiesPath;
+    console.log("✓ Using cookies file for YouTube authentication");
+}
+// Fallback to environment variable (Railway automatic deployment)
+else if (cookiesEnvVar) {
+    try {
+        // Decode base64 and write to temp file
+        const cookiesContent = Buffer.from(cookiesEnvVar, 'base64').toString();
+        actualCookiesPath = path.join(__dirname, '.temp.cookies.txt');
+        fs.writeFileSync(actualCookiesPath, cookiesContent);
+        console.log("✓ Using cookies from environment variable");
+    } catch (error) {
+        console.error("✗ Failed to decode cookies from env var:", error.message);
+    }
+}
+
+if (actualCookiesPath) {
+    ytExec = create(ytbin, { cookies: actualCookiesPath });
+} else {
+    console.warn("⚠ No cookies found (file or env var). YouTube may block requests.");
+    ytExec = create(ytbin);
+}
 
 const ytmusic = new YTMusic();
+
+/**
+ * Execute yt-dlp with retry logic
+ * @param {string} url - YouTube video URL
+ * @param {Object} options - yt-dlp options
+ * @param {number} maxRetries - Maximum retry attempts (default: 3)
+ * @returns {Promise} - yt-dlp result
+ */
+async function ytExecWithRetry(url, options, maxRetries = 3) {
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`Attempt ${attempt}/${maxRetries}: Fetching stream for ${url}`);
+            const result = await ytExec(url, options);
+            
+            if (result && result.url) {
+                console.log(`✓ Success on attempt ${attempt}`);
+                return result;
+            }
+            
+            throw new Error("No stream URL found in response");
+            
+        } catch (error) {
+            lastError = error;
+            console.error(`✗ Attempt ${attempt} failed:`, error.message);
+            
+            // Only retry on bot verification errors
+            if (error.message?.includes('Sign in to confirm') && attempt < maxRetries) {
+                const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 4000);
+                console.log(`Waiting ${delayMs}ms before retry ${attempt + 1}...`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            } else {
+                break; // Non-retryable error or final attempt
+            }
+        }
+    }
+    
+    throw lastError;
+}
 ytmusic.initialize().catch(err => console.error("ytmusic init err:", err));
 
 const app = express();
@@ -280,13 +351,13 @@ app.get('/api/stream/:videoId', async (req, res) => {
 
         let streamPromise = inFlightStreams.get(videoId);
         if (!streamPromise) {
-            streamPromise = ytExec(ytUrl, {
+            streamPromise = ytExecWithRetry(ytUrl, {
                 dumpJson: true,
                 format: 'bestaudio',
                 noCheckCertificates: true,
                 noWarnings: true,
                 preferFreeFormats: true
-            }).finally(() => {
+            }, 3).finally(() => {
                 inFlightStreams.delete(videoId);
             });
             inFlightStreams.set(videoId, streamPromise);
@@ -302,8 +373,23 @@ app.get('/api/stream/:videoId', async (req, res) => {
             res.status(404).json({ error: "Audio stream not found" });
         }
     } catch (error) {
-        console.error("Stream fetch error:", error);
-        res.status(500).json({ error: "Failed to fetch stream link" });
+        console.error("Stream fetch error after all retries:", error);
+        
+        const errorResponse = {
+            error: "Failed to fetch stream link",
+            video_id: videoId,
+            attempts_made: 3,
+            error_type: error.message?.includes('Sign in to confirm') ? 'bot_verification' : 'unknown',
+            message: error.message,
+            suggestions: [
+                "Ensure cookies file is valid and not expired",
+                "Try refreshing your cookies",
+                "Check if video is age-restricted or blocked",
+                "Video may be unavailable in your region"
+            ]
+        };
+        
+        res.status(500).json(errorResponse);
     }
 });
 
